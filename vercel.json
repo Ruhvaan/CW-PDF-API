@@ -10,6 +10,14 @@
     {
       "src": "/pdf",
       "dest": "/api/pdf.js"
+    },
+    {
+      "src": "/health",
+      "dest": "/api/health.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/api/pdf.js"
     }
   ],
   "functions": {
