@@ -1,65 +1,55 @@
-const puppeteer = require('puppeteer-core');
 const chromium = require('@sparticuz/chromium');
+const puppeteer = require('puppeteer-core');
 
 module.exports = async (req, res) => {
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-  );
-
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  
   if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
+    return res.status(200).end();
   }
-
-  let browser;
+  
+  let browser = null;
+  
   try {
-    const { url, format = 'A4', scale = 1, margin } = req.query;
-
-    if (!url) {
-      return res.status(400).json({ error: 'URL parameter is required' });
+    const targetUrl = req.query.url;
+    
+    if (!targetUrl) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'URL parameter required'
+      });
     }
-
+    
     browser = await puppeteer.launch({
       args: chromium.args,
       defaultViewport: chromium.defaultViewport,
       executablePath: await chromium.executablePath(),
-      headless: true,
-      timeout: 30000,
+      headless: chromium.headless,
+      ignoreHTTPSErrors: true,
     });
-
+    
     const page = await browser.newPage();
-    await page.goto(url, { waitUntil: 'networkidle0', timeout: 30000 });
-
-    const pdfOptions = {
-      format: format,
-      scale: parseFloat(scale),
-      displayHeaderFooter: false,
-      printBackground: true,
-    };
-
-    if (margin) {
-      const marginObj = JSON.parse(margin);
-      pdfOptions.margin = marginObj;
-    }
-
-    const pdf = await page.pdf(pdfOptions);
-
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Length', pdf.length);
-    res.send(pdf);
-  } catch (error) {
-    console.error('PDF Generation Error:', error);
-    res.status(500).json({
-      error: 'Failed to generate PDF',
-      message: error.message,
+    
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    
+    const response = await page.goto(targetUrl, {
+      waitUntil: 'networkidle2',
+      timeout: 60000
     });
-  } finally {
-    if (browser) {
-      await browser.close();
+    
+    if (!response || !response.ok()) {
+      throw new Error('Failed to load URL');
     }
+    
+    const buffer = await page.pdf({ format: 'A4' });
+    
+    res.setHeader('Content-Type', 'application/pdf');
+    res.status(200).send(buffer);
+    
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  } finally {
+    if (browser) await browser.close();
   }
 };
