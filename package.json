@@ -1,17 +1,8 @@
 {
   "name": "pdf-proxy-api",
   "version": "1.0.0",
-  "description": "PDF Generation API using Puppeteer",
-  "main": "api/pdf.js",
-  "scripts": {
-    "dev": "vercel dev"
-  },
   "dependencies": {
-    "puppeteer": "^21.0.0",
     "puppeteer-core": "^21.0.0",
     "@sparticuz/chromium": "^119.0.0"
-  },
-  "engines": {
-    "node": "18.x"
   }
 }
